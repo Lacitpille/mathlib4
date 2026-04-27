@@ -396,6 +396,9 @@ lemma le_iff_forall : x ≤ y ↔ ∀ a : α, x = ↑a → ∃ b : α, y = ↑b 
 @[to_dual (attr := simp, norm_cast)]
 lemma coe_le_coe : (a : WithBot α) ≤ b ↔ a ≤ b := by simp [le_def]
 
+@[to_dual (attr := simp) coe_le_top]
+lemma bot_le_coe (a : α) : (⊥ : WithBot α) ≤ a := by simp [le_def]
+
 @[to_dual not_top_le_coe]
 lemma not_coe_le_bot (a : α) : ¬(a : WithBot α) ≤ ⊥ := by simp [le_def]
 

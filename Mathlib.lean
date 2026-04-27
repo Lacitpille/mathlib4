@@ -7813,6 +7813,7 @@ public import Mathlib.Topology.Order.ScottTopology
 public import Mathlib.Topology.Order.SuccPred
 public import Mathlib.Topology.Order.T5
 public import Mathlib.Topology.Order.UpperLowerSetTopology
+public import Mathlib.Topology.Order.WithBotTop
 public import Mathlib.Topology.Order.WithTop
 public import Mathlib.Topology.Partial
 public import Mathlib.Topology.PartitionOfUnity

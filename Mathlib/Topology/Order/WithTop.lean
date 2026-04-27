@@ -6,12 +6,14 @@ Authors: Rémy Degenne, Sébastien Gouëzel
 module
 
 public import Mathlib.Topology.Order.Basic
+public import Mathlib.Topology.Order.MonotoneContinuity
 public import Mathlib.Data.Fintype.WithTopBot
 
-/-! # Order topology on `WithTop ι`
+/-! # Order topology on `WithTop ι` and `WithBot ι`
 
-When `ι` is a topological space with the order topology, we also endow `WithTop ι` with the order
-topology. If `ι` is second countable, we prove that `WithTop ι` also is.
+When `ι` is a topological space with the order topology, we also endow `WithTop ι` and `WithBot ι`
+with the order topology. If `ι` is second countable, we prove that `WithTop ι` and `WithBot ι` also
+are.
 -/
 
 @[expose] public section
@@ -23,10 +25,11 @@ namespace TopologicalSpace
 
 variable {ι : Type*} [Preorder ι]
 
-@[nolint unusedArguments]
+@[to_dual, nolint unusedArguments]
 instance [TopologicalSpace ι] [OrderTopology ι] : TopologicalSpace (WithTop ι) :=
   Preorder.topology _
 
+@[to_dual]
 instance [TopologicalSpace ι] [OrderTopology ι] : OrderTopology (WithTop ι) := ⟨rfl⟩
 
 instance [ts : TopologicalSpace ι] [ht : OrderTopology ι] [SecondCountableTopology ι] :
@@ -177,6 +180,11 @@ instance [ts : TopologicalSpace ι] [ht : OrderTopology ι] [SecondCountableTopo
               apply isOpen_generateFrom_of_mem
               grind
 
+@[to_dual existing]
+instance [TopologicalSpace ι] [OrderTopology ι] [SecondCountableTopology ι] :
+    SecondCountableTopology (WithBot ι) :=
+  WithTop.toDualBotEquiv (α := ι).symm.toHomeomorph.isEmbedding.secondCountableTopology
+
 end TopologicalSpace
 
 namespace WithTop
@@ -185,10 +193,9 @@ variable {ι : Type*} [LinearOrder ι] [TopologicalSpace ι] [OrderTopology ι]
 
 section Coe
 
-lemma isEmbedding_coe : Topology.IsEmbedding ((↑) : ι → WithTop ι) := by
-  refine WithTop.coe_strictMono.isEmbedding_of_ordConnected (α := ι) ?_
-  rw [WithTop.range_coe]
-  exact Set.ordConnected_Iio
+lemma isEmbedding_coe : Topology.IsEmbedding ((↑) : ι → WithTop ι) :=
+  WithTop.coe_strictMono.isEmbedding_of_ordConnected (α := ι) <| by
+    rw [WithTop.range_coe]; exact Set.ordConnected_Iio
 
 lemma isOpenEmbedding_coe : Topology.IsOpenEmbedding ((↑) : ι → WithTop ι) :=
   ⟨isEmbedding_coe, by rw [WithTop.range_coe]; exact isOpen_Iio⟩
@@ -226,6 +233,30 @@ lemma tendsto_untop (a : {a : WithTop ι | a ≠ ⊤}) :
 
 lemma continuous_untop : Continuous (fun x : {a : WithTop ι | a ≠ ⊤} ↦ untop x.1 x.2) :=
   continuous_iff_continuousAt.mpr tendsto_untop
+
+/-- If `u` is eventually different from `⊤`, then convergence of `u` to a finite point in
+`WithTop ι` is equivalent to convergence of `untopD` of `u` to that point in `ι`. -/
+lemma tendsto_coe_iff_tendsto_untopD {α : Type*} {l : Filter α} {u : α → WithTop ι} {d a : ι}
+    (hu : ∀ᶠ x in l, u x ≠ ⊤) :
+    Tendsto u l (𝓝 (a : WithTop ι)) ↔ Tendsto (fun x ↦ (u x).untopD d) l (𝓝 a) := by
+  refine (tendsto_congr' ?_).trans isEmbedding_coe.tendsto_nhds_iff.symm
+  filter_upwards [hu] with x hx
+  obtain ⟨v, hv⟩ := ne_top_iff_exists.mp hx
+  simp [← hv]
+
+/-- Convergence of `u : α → WithTop ι` to a finite point is equivalent to `u` being eventually
+different from `⊤` and convergence of `untopD` of `u` to that point in `ι`. -/
+lemma tendsto_coe_iff_eventually_ne_top_and_tendsto_untopD {α : Type*}
+    {l : Filter α} {u : α → WithTop ι} {d a : ι} :
+    Tendsto u l (𝓝 (a : WithTop ι)) ↔
+      (∀ᶠ x in l, u x ≠ ⊤) ∧ Tendsto (fun x ↦ (u x).untopD d) l (𝓝 a) := by
+  constructor
+  · intro h
+    have hu : ∀ᶠ x in l, u x ≠ ⊤ :=
+      (h.eventually <| isOpen_Iio.mem_nhds (by simp)).mono fun _ hx ↦ hx.ne
+    exact ⟨hu, (tendsto_coe_iff_tendsto_untopD hu).1 h⟩
+  · rintro ⟨hu, h⟩
+    exact (tendsto_coe_iff_tendsto_untopD hu).2 h
 
 end ContinuousUnTop
 
@@ -277,3 +308,111 @@ lemma tendsto_coe_atTop [NoMaxOrder ι] :
   simp
 
 end WithTop
+
+namespace WithBot
+
+variable {ι : Type*} [LinearOrder ι] [TopologicalSpace ι] [OrderTopology ι]
+
+section Coe
+
+lemma isEmbedding_coe : Topology.IsEmbedding ((↑) : ι → WithBot ι) := by
+  refine WithBot.coe_strictMono.isEmbedding_of_ordConnected (α := ι) ?_
+  rw [WithBot.range_coe]
+  exact Set.ordConnected_Ioi
+
+lemma isOpenEmbedding_coe : Topology.IsOpenEmbedding ((↑) : ι → WithBot ι) :=
+  ⟨isEmbedding_coe, by rw [WithBot.range_coe]; exact isOpen_Ioi⟩
+
+lemma nhds_coe {r : ι} : 𝓝 (r : WithBot ι) = (𝓝 r).map (↑) :=
+  (isOpenEmbedding_coe.map_nhds_eq r).symm
+
+@[fun_prop, continuity]
+lemma continuous_coe : Continuous ((↑) : ι → WithBot ι) := isEmbedding_coe.continuous
+
+end Coe
+
+section ContinuousUnTop
+
+lemma tendsto_unbotD (d : ι) {a : WithBot ι} (ha : a ≠ ⊥) :
+    Tendsto (unbotD d) (𝓝 a) (𝓝 (unbotD d a)) := by
+  lift a to ι using ha
+  rw [nhds_coe, tendsto_map'_iff]
+  exact tendsto_id
+
+lemma continuousOn_unbotD (d : ι) : ContinuousOn (unbotD d) { a : WithBot ι | a ≠ ⊥ } :=
+  fun _a ha ↦ ContinuousAt.continuousWithinAt (tendsto_unbotD d ha)
+
+lemma tendsto_unbotA [Nonempty ι] {a : WithBot ι} (ha : a ≠ ⊥) :
+    Tendsto unbotA (𝓝 a) (𝓝 a.unbotA) := tendsto_unbotD _ ha
+
+lemma continuousOn_unbotA [Nonempty ι] : ContinuousOn unbotA { a : WithBot ι | a ≠ ⊥ } :=
+  continuousOn_unbotD _
+
+lemma tendsto_unbot (a : {a : WithBot ι | a ≠ ⊥}) :
+    Tendsto (fun x ↦ unbot x.1 x.2) (𝓝 a) (𝓝 (unbot a.1 a.2)) := by
+  have : Nonempty ι := ⟨unbot a.1 a.2⟩
+  simp only [← unbotA_eq_unbot, ne_eq, coe_setOf, mem_setOf_eq]
+  exact (tendsto_unbotA a.2).comp <| tendsto_subtype_rng.mp tendsto_id
+
+lemma continuous_unbot : Continuous (fun x : {a : WithBot ι | a ≠ ⊥} ↦ unbot x.1 x.2) :=
+  continuous_iff_continuousAt.mpr tendsto_unbot
+
+/-- If `u` is eventually different from `⊥`, then convergence of `u` to a finite point in
+`WithBot ι` is equivalent to convergence of `unbotD` of `u` to that point in `ι`. -/
+lemma tendsto_coe_iff_tendsto_unbotD {β : Type*} {l : Filter β} {u : β → WithBot ι} {d a : ι}
+    (hu : ∀ᶠ x in l, u x ≠ ⊥) :
+    Tendsto u l (𝓝 (a : WithBot ι)) ↔ Tendsto (fun x ↦ (u x).unbotD d) l (𝓝 a) := by
+  refine (tendsto_congr' ?_).trans isEmbedding_coe.tendsto_nhds_iff.symm
+  filter_upwards [hu] with x hx
+  obtain ⟨v, hv⟩ := ne_bot_iff_exists.mp hx
+  simp [← hv]
+
+/-- Convergence of `u : α → WithBot ι` to a finite point is equivalent to `u` being eventually
+different from `⊥` and convergence of `unbotD` of `u` to that point in `ι`. -/
+lemma tendsto_coe_iff_tendsto_unbotD' {β : Type*}
+    {l : Filter β} {u : β → WithBot ι} {d a : ι} :
+    Tendsto u l (𝓝 (a : WithBot ι)) ↔
+      (∀ᶠ x in l, u x ≠ ⊥) ∧ Tendsto (fun x ↦ (u x).unbotD d) l (𝓝 a) := by
+  constructor
+  · intro h
+    have hu : ∀ᶠ x in l, u x ≠ ⊥ :=
+      have : (a : WithBot ι) ∈ Ioi ⊥ := by simp
+      (h.eventually <| isOpen_Ioi.mem_nhds this).mono fun _ hx ↦ hx.ne'
+    exact ⟨hu, (tendsto_coe_iff_tendsto_unbotD hu).1 h⟩
+  · rintro ⟨hu, h⟩
+    exact (tendsto_coe_iff_tendsto_unbotD hu).2 h
+
+end ContinuousUnTop
+
+variable (ι) in
+/-- Homeomorphism between the non-top elements of `WithBot ι` and `ι`. -/
+noncomputable
+def neBotHomeomorph : { a : WithBot ι | a ≠ ⊥ } ≃ₜ ι where
+  toEquiv := Equiv.withBotSubtypeNe
+  continuous_toFun := continuous_unbot
+  continuous_invFun := continuous_coe.subtype_mk _
+
+variable (ι) in
+/-- If `ι` has a top element, then `WithBot ι` is homeomorphic to `ι ⊕ Unit`. -/
+@[to_dual existing] noncomputable
+def sumHomeomorph [OrderBot ι] : WithBot ι ≃ₜ ι ⊕ Unit :=
+  WithTop.toDualBotEquiv (α := ι).symm.toHomeomorph.trans (WithTop.sumHomeomorph _)
+
+lemma tendsto_nhds_bot_iff {α : Type*} {f : Filter α} (x : α → WithBot ι) :
+    Tendsto x f (𝓝 ⊥) ↔ ∀ (i : ι), ∀ᶠ (a : α) in f, x a < i := by
+  obtain (h | h) := isEmpty_or_nonempty ι
+  · simpa using .of_forall fun _ ↦ Subsingleton.elim ..
+  refine nhds_bot_basis.tendsto_right_iff.trans ?_
+  rw [← Set.forall_mem_range (p := (∀ᶠ a in f, x a < ·)), WithBot.range_coe]
+  simp
+
+lemma tendsto_coe_atBot [NoMinOrder ι] :
+    Tendsto ((↑) : ι → WithBot ι) atBot (𝓝 ⊥) := by
+  obtain (h | h) := isEmpty_or_nonempty ι
+  · simpa using Subsingleton.elim ..
+  rw [tendsto_nhds_bot_iff]
+  intro i
+  filter_upwards [atBot_basis_Iio.mem_of_mem (i := i) trivial]
+  simp
+
+end WithBot

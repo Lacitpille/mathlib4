@@ -103,10 +103,8 @@ lemma tendsto_coe_iff_tendsto_unbdryD {α : Type*} {l : Filter α} {u : α → W
       Tendsto (fun x ↦ (u x).unbdryD d) l (𝓝 a) := by
   refine (tendsto_congr' ?_).trans isEmbedding_coe.tendsto_nhds_iff.symm
   filter_upwards [hu] with x hx
-  match h : u x with
-  | ⊥ => exact (hx.1 h).elim
-  | ⊤ => exact (hx.2 h).elim
-  | (v : ι) => simp only [Function.comp_apply, h, coe_inj]; rfl
+  obtain ⟨_, h⟩ := canLift.prf (u x) hx
+  simp [← h]
 
 lemma tendsto_coe_iff_tendsto_unbdryD' {α : Type*} {l : Filter α} {u : α → WithBotTop ι} {d a : ι} :
     Tendsto u l (𝓝 (a : WithBotTop ι)) ↔
@@ -130,9 +128,7 @@ nonrec theorem nhds_top_basis : (𝓝 (⊤ : WithBotTop ι)).HasBasis (fun _ : �
   refine (nhds_top_basis (α := WithBotTop ι)).to_hasBasis (fun x hx => ?_)
     fun a _ ↦ ⟨(a : WithBotTop ι), by simp, Subset.rfl⟩
   match x with
-  | ⊥ =>
-      obtain ⟨a⟩ := ‹Nonempty ι›
-      exact ⟨a, trivial, Ioi_subset_Ioi bot_le⟩
+  | ⊥ => exact ⟨Classical.choice ‹Nonempty ι›, trivial, Ioi_subset_Ioi bot_le⟩
   | ⊤ => simp at hx
   | (a : ι) => exact ⟨a, trivial, Subset.rfl⟩
 
@@ -152,9 +148,7 @@ nonrec theorem nhds_bot_basis : (𝓝 (⊥ : WithBotTop ι)).HasBasis (fun _ : �
     fun a _ ↦ ⟨(a : WithBotTop ι), by simp, Subset.rfl⟩
   match x with
   | ⊥ => simp at hx
-  | ⊤ =>
-      obtain ⟨a⟩ := ‹Nonempty ι›
-      exact ⟨a, trivial, Iio_subset_Iio le_top⟩
+  | ⊤ => exact ⟨Classical.choice ‹Nonempty ι›, trivial, Iio_subset_Iio le_top⟩
   | (a : ι) => exact ⟨a, trivial, Subset.rfl⟩
 
 theorem nhds_bot' :

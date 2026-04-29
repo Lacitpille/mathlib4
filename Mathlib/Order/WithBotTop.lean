@@ -36,23 +36,12 @@ theorem coe_injective : Function.Injective (WithBotTop.coe : ι → _) := by rin
 @[simp, norm_cast]
 theorem coe_inj {a b : ι} : (a : WithBotTop ι) = b ↔ a = b := coe_injective.eq_iff
 
-@[simp]
-lemma coe_ne_bot {a : ι} : (a : WithBotTop ι) ≠ ⊥ := by rintro ⟨⟩
-
-@[simp]
-lemma bot_ne_coe {a : ι} : ⊥ ≠ (a : WithBotTop ι) := by rintro ⟨⟩
-
-@[simp]
-lemma coe_ne_top {a : ι} : (a : WithBotTop ι) ≠ ⊤ := by rintro ⟨⟩
-
-@[simp]
-lemma top_ne_coe {a : ι} : ⊤ ≠ (a : WithBotTop ι) := by rintro ⟨⟩
-
-@[simp]
-lemma top_ne_bot : (⊤ : WithBotTop ι) ≠ ⊥ := by rintro ⟨⟩
-
-@[simp]
-lemma bot_ne_top : (⊥ : WithBotTop ι) ≠ ⊤ := by rintro ⟨⟩
+@[simp] lemma coe_ne_bot {a : ι} : (a : WithBotTop ι) ≠ ⊥ := by rintro ⟨⟩
+@[simp] lemma bot_ne_coe {a : ι} : ⊥ ≠ (a : WithBotTop ι) := by rintro ⟨⟩
+@[simp] lemma coe_ne_top {a : ι} : (a : WithBotTop ι) ≠ ⊤ := by rintro ⟨⟩
+@[simp] lemma top_ne_coe {a : ι} : ⊤ ≠ (a : WithBotTop ι) := by rintro ⟨⟩
+@[simp] lemma top_ne_bot : (⊤ : WithBotTop ι) ≠ ⊥ := by rintro ⟨⟩
+@[simp] lemma bot_ne_top : (⊥ : WithBotTop ι) ≠ ⊤ := by rintro ⟨⟩
 
 protected theorem «forall» {p : WithBotTop ι → Prop} :
     (∀ r, p r) ↔ p ⊥ ∧ p ⊤ ∧ ∀ r : ι, p r :=
@@ -74,14 +63,9 @@ protected def rec : ∀ a, motive a
   | (a : ι) => coe a
   | ⊤ => top
 
-@[simp]
-lemma rec_bot : WithBotTop.rec (motive := motive) bot coe top ⊥ = bot := rfl
-
-@[simp]
-lemma rec_coe (a : ι) : WithBotTop.rec (motive := motive) bot coe top a = coe a := rfl
-
-@[simp]
-lemma rec_top : WithBotTop.rec (motive := motive) bot coe top ⊤ = top := rfl
+@[simp] lemma rec_bot : WithBotTop.rec (motive := motive) bot coe top ⊥ = bot := rfl
+@[simp] lemma rec_coe (a : ι) : WithBotTop.rec (motive := motive) bot coe top a = coe a := rfl
+@[simp] lemma rec_top : WithBotTop.rec (motive := motive) bot coe top ⊤ = top := rfl
 
 end
 

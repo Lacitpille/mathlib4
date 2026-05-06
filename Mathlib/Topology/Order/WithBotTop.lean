@@ -128,7 +128,7 @@ nonrec theorem nhds_top_basis : (𝓝 (⊤ : WithBotTop ι)).HasBasis (fun _ : �
   refine (nhds_top_basis (α := WithBotTop ι)).to_hasBasis (fun x hx => ?_)
     fun a _ ↦ ⟨(a : WithBotTop ι), by simp, Subset.rfl⟩
   match x with
-  | ⊥ => exact ⟨Classical.choice ‹Nonempty ι›, trivial, Ioi_subset_Ioi bot_le⟩
+  | ⊥ => exact ⟨‹Nonempty ι›.some, trivial, Ioi_subset_Ioi bot_le⟩
   | ⊤ => simp at hx
   | (a : ι) => exact ⟨a, trivial, Subset.rfl⟩
 
@@ -148,7 +148,7 @@ nonrec theorem nhds_bot_basis : (𝓝 (⊥ : WithBotTop ι)).HasBasis (fun _ : �
     fun a _ ↦ ⟨(a : WithBotTop ι), by simp, Subset.rfl⟩
   match x with
   | ⊥ => simp at hx
-  | ⊤ => exact ⟨Classical.choice ‹Nonempty ι›, trivial, Iio_subset_Iio le_top⟩
+  | ⊤ => exact ⟨‹Nonempty ι›.some, trivial, Iio_subset_Iio le_top⟩
   | (a : ι) => exact ⟨a, trivial, Subset.rfl⟩
 
 theorem nhds_bot' :

@@ -12,8 +12,8 @@ public import Akizuki.Mathlib.Algebra.Module.Torsion.Basic
 public import Akizuki.Mathlib.Algebra.Order.Archimedean.WithTop
 public import Akizuki.Mathlib.LinearAlgebra.LinearIndependent.Lemmas
 public import Akizuki.Mathlib.RingTheory.Length
-public import Akizuki.Mathlib.RingTheory.OrderOfVanishing.Basic
 public import Akizuki.Mathlib.RingTheory.QuotSMulTop
+public import Akizuki.Mathlib.RingTheory.FiniteLength.Support
 
 /-!
 # Length bounds for reductions modulo a regular element
@@ -52,8 +52,10 @@ theorem length_quotSMulTop_pow {x : R} (hx : IsSMulRegular M x) (n : ℕ) :
           rw [ih, Nat.cast_succ, add_mul, one_mul]
 
 /-- Length of a product reduced modulo `x`. -/
-theorem length_quotSMulTop_pi {ι : Type*} [Fintype ι] [DecidableEq ι] (x : R) :
+theorem length_quotSMulTop_pi {ι : Type*} [Finite ι] (x : R) :
     length R (QuotSMulTop x (ι → R)) = ENat.card ι * length R (QuotSMulTop x R) := by
+  classical
+  cases nonempty_fintype ι
   rw [(QuotSMulTop.piEquiv (M := fun _ : ι => R) x).length_eq, length_pi]
 
 /-- The reduction of `M` modulo `x` is bounded by the corresponding reduction of a submodule

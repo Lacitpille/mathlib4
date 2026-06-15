@@ -63,12 +63,10 @@ private lemma quotSMulTop_isFiniteLength_aux (a : A) (ha : a ≠ 0) :
   have ha_reg : IsSMulRegular B a := (isRegular_iff_ne_zero.mpr ha).isSMulRegular
   have hrank_ne : (Module.rank A B).toENat ≠ ⊤ :=
     Cardinal.toENat_ne_top.mpr (rank_lt_aleph0_aux K B)
-  have hspan : Ideal.span {a} = a • (⊤ : Submodule A A) := by
-    rw [← Submodule.ideal_span_singleton_smul, Ideal.smul_eq_mul, Ideal.mul_top]
-  have hAfl : IsFiniteLength A (QuotSMulTop a A) :=
-    IsFiniteLength.of_surjective (f := (Submodule.quotEquivOfEq _ _ hspan).toLinearMap)
-      (isFiniteLength_quotient_span_singleton A (mem_nonZeroDivisors_of_ne_zero ha))
-      (Submodule.quotEquivOfEq _ _ hspan).surjective
+  have hAfl : IsFiniteLength A (QuotSMulTop a A) := by
+    refine Module.IsTorsion.isFiniteLength fun x => ⟨⟨a, mem_nonZeroDivisors_of_ne_zero ha⟩, ?_⟩
+    obtain ⟨y, rfl⟩ := Submodule.Quotient.mk_surjective _ x
+    exact (Submodule.Quotient.mk_eq_zero _).mpr (Submodule.smul_mem_pointwise_smul y a ⊤ trivial)
   exact Module.length_ne_top_iff.mp <|
     ne_top_of_le_ne_top (WithTop.mul_ne_top hrank_ne (Module.length_ne_top_iff.mpr hAfl))
       (Module.length_quotSMulTop_le_rank_toENat_mul ha_reg)
@@ -116,13 +114,14 @@ theorem isMaximal_of_ne_bot (P : Ideal B) [Ideal.IsPrime P] (hP : P ≠ ⊥) :
   have : IsDomain (B ⧸ P) := (Ideal.Quotient.isDomain_iff_prime P).mpr inferInstance
   exact Ideal.Quotient.maximal_of_isField P (IsArtinianRing.isField_of_isDomain (B ⧸ P))
 
-/-- **Krull–Akizuki theorem**: `B` has Krull dimension at most one. -/
+/-- **Krull–Akizuki theorem**: `B` has Krull dimension at most one, as `Ring.DimensionLEOne`
+(the form consumed by `IsDedekindDomain`). -/
 theorem dimensionLEOne : Ring.DimensionLEOne B where
   maximalOfPrime {P} hP hP_prime :=
     have : P.IsPrime := hP_prime
     isMaximal_of_ne_bot K B P hP
 
-/-- **Krull–Akizuki theorem**: `B` has Krull dimension at most one. -/
+/-- **Krull–Akizuki theorem**: `B` has Krull dimension at most one, as `Ring.KrullDimLE 1`. -/
 theorem krullDimLE_one : Ring.KrullDimLE 1 B :=
   haveI := dimensionLEOne K B
   inferInstance

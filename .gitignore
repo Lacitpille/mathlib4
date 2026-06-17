@@ -10,3 +10,5 @@
 scripts/.rm_set_option_progress.jsonl
 # Artifacts from using the devcontainer setup
 .devcontainer/devcontainer-lock.json
+# Local Krull–Akizuki dependency-graph visualization (generated, not for upstream)
+akizuki_dag/

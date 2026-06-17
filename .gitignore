@@ -13,3 +13,5 @@ scripts/.rm_set_option_progress.jsonl
 
 # Output of scripts/export_crossrefs.lean
 /crossrefs.json
+# Local Krull–Akizuki dependency-graph visualization (generated, not for upstream)
+akizuki_dag/

@@ -69,9 +69,9 @@ theorem isArtinian_iff_isArtinianRing_quotient_annihilator [Module.Finite R M] :
     obtain ⟨n, f, hf⟩ := Module.exists_injective_quotient_annihilator_pi (R := R) (M := M)
     exact isArtinian_of_tower R (isArtinian_of_injective f hf)
   · intro h
-    haveI : Module.Finite (R ⧸ Module.annihilator R M) M :=
+    have : Module.Finite (R ⧸ Module.annihilator R M) M :=
       Module.Finite.of_restrictScalars_finite R _ M
-    haveI : IsArtinian (R ⧸ Module.annihilator R M) M := isArtinian_of_fg_of_artinian'
+    have : IsArtinian (R ⧸ Module.annihilator R M) M := isArtinian_of_fg_of_artinian'
     exact (Submodule.orderIsoQuotientAnnihilator R M).toOrderEmbedding.wellFoundedLT
 
 /-- A finitely generated module is Noetherian iff the quotient of the base ring by its
@@ -83,9 +83,9 @@ theorem isNoetherian_iff_isNoetherianRing_quotient_annihilator [Module.Finite R 
     obtain ⟨n, f, hf⟩ := Module.exists_injective_quotient_annihilator_pi (R := R) (M := M)
     exact isNoetherian_of_tower R (isNoetherian_of_injective f hf)
   · intro h
-    haveI : Module.Finite (R ⧸ Module.annihilator R M) M :=
+    have : Module.Finite (R ⧸ Module.annihilator R M) M :=
       Module.Finite.of_restrictScalars_finite R _ M
-    haveI : IsNoetherian (R ⧸ Module.annihilator R M) M :=
+    have : IsNoetherian (R ⧸ Module.annihilator R M) M :=
       isNoetherian_of_isNoetherianRing_of_finite _ _
     exact isNoetherian_mk
       (Submodule.orderIsoQuotientAnnihilator R M).toOrderEmbedding.wellFoundedGT

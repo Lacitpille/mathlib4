@@ -6,7 +6,7 @@ Authors: Lacitpille
 module
 
 public import Mathlib.Algebra.Order.Monoid.WithTop
-public import Mathlib.Data.ENat.Basic
+public import Mathlib.Data.ENat.Monoid
 public import Akizuki.Mathlib.Algebra.Order.Archimedean.Basic
 
 /-!
@@ -39,7 +39,10 @@ namespace ENat
 /-- In `ℕ∞`, if `n * a ≤ n * b + c` for all `n : ℕ` with `c ≠ ⊤`, then `a ≤ b`. -/
 theorem le_of_forall_natCast_mul_le_natCast_mul_add {a b c : ℕ∞} (hc : c ≠ ⊤)
     (h : ∀ n : ℕ, n * a ≤ n * b + c) : a ≤ b := by
-  obtain ⟨_, rfl⟩ := ENat.ne_top_iff_exists.mp hc
-  exact WithTop.le_of_forall_nsmul_le_nsmul_add <| by simpa
+  obtain ⟨c, rfl⟩ := ENat.ne_top_iff_exists.mp hc
+  refine WithTop.le_of_forall_nsmul_le_nsmul_add (c := c) fun n => ?_
+  have := h n
+  rw [← nsmul_eq_mul, ← nsmul_eq_mul] at this
+  exact this
 
 end ENat

@@ -33,7 +33,7 @@ theorem FG.exists_fg_map_eq {P : Submodule R N} (hP : P.FG) (f : M →ₗ[R] N)
     (hf : Function.Surjective f) : ∃ Q : Submodule R M, Q.FG ∧ Q.map f = P := by
   obtain ⟨t, htf, rfl⟩ := Submodule.fg_def.mp hP
   choose g hg using fun y : t => hf y
-  haveI := htf.to_subtype
+  have := htf.to_subtype
   refine ⟨Submodule.span R (Set.range g), Submodule.fg_span (Set.finite_range g), ?_⟩
   rw [Submodule.map_span, ← Set.range_comp, show f ∘ g = Subtype.val from funext hg,
     Subtype.range_coe]

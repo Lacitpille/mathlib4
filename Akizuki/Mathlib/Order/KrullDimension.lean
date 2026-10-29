@@ -24,7 +24,7 @@ element. -/
 theorem exists_isGreatest_of_sSup_height_ne_top {α : Type*} [PartialOrder α] {d : Set α}
     (hne : d.Nonempty) (hdir : DirectedOn (· ≤ ·) d) (hd : sSup (height '' d) ≠ ⊤) :
     ∃ x, IsGreatest d x := by
-  haveI : Nonempty ↥(height '' d) := (hne.image height).to_subtype
+  have : Nonempty ↥(height '' d) := (hne.image height).to_subtype
   obtain ⟨x, hx, hxe⟩ := ENat.sSup_mem_of_nonempty_of_lt_top (lt_top_iff_ne_top.mpr hd)
   refine ⟨x, hx, fun y hy => ?_⟩
   obtain ⟨z, hz, hyz, hxz⟩ := hdir y hy x hx

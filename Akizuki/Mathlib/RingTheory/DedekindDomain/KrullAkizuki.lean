@@ -76,7 +76,7 @@ length as an `A`-module. -/
 theorem isFiniteLength_quotient (b : Ideal B) (hb : b ≠ ⊥) : IsFiniteLength A (B ⧸ b) := by
   have : Algebra.IsAlgebraic A B := isAlgebraic_aux K B
   obtain ⟨a, haI, ha0⟩ :=
-    Submodule.exists_mem_ne_zero_of_ne_bot (Ideal.IsAlgebraic.comap_ne_bot A hb)
+    Submodule.exists_mem_ne_zero_of_ne_bot (Ideal.IsAlgebraic.under_ne_bot A hb)
   have hle : a • (⊤ : Submodule A B) ≤ b.restrictScalars A := by
     intro z hz
     rcases (Submodule.mem_smul_pointwise_iff_exists z a ⊤).mp hz with ⟨w, _, hzw⟩

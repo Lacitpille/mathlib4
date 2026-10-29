@@ -82,6 +82,11 @@ lean_lib Mathlib where
   -- Enforce Mathlib's default linters and style options.
   leanOptions := mathlibLeanOptions
 
+-- Local staging library for the Krull–Akizuki formalization (not for upstream).
+lean_lib Akizuki where
+  globs := #[.submodules `Akizuki]
+  leanOptions := mathlibLeanOptions
+
 -- NB. When adding further libraries, check if they should be excluded from `getLeanLibs` in
 -- `scripts/mk_all.lean`.
 lean_lib Cache where

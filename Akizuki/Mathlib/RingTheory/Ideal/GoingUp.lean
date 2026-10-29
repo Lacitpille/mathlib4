@@ -10,16 +10,17 @@ public import Mathlib.RingTheory.Ideal.GoingUp
 /-!
 # Contraction of nonzero ideals along algebraic extensions
 
-If `S` is an algebraic extension of `R`, the contraction of a nonzero ideal of `S` is nonzero.
-This generalizes `Ideal.IsIntegral.under_ne_bot` from integral to algebraic extensions.
+If `S` is a domain that is algebraic over `R`, the contraction of a nonzero ideal of `S` is
+nonzero (`Ideal.IsAlgebraic.under_ne_bot`). This generalizes `Ideal.IsIntegral.under_ne_bot` and
+`Ideal.under_ne_bot` from integral to algebraic extensions.
 -/
 
 public section
 
 namespace Ideal
 
-/-- Over a domain, the contraction of a nonzero ideal along an algebraic extension is
-nonzero. -/
+/-- If `S` is a domain that is algebraic over `R`, the contraction to `R` of a nonzero ideal of
+`S` is nonzero. -/
 theorem IsAlgebraic.under_ne_bot (R : Type*) {S : Type*} [CommRing R] [CommRing S]
     [IsDomain S] [Algebra R S] [Algebra.IsAlgebraic R S] {I : Ideal S} (I_ne_bot : I ≠ ⊥) :
     I.under R ≠ ⊥ :=

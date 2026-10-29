@@ -6,52 +6,55 @@ Authors: Lacitpille
 module
 
 public import Mathlib.Order.KrullDimension
-public import Mathlib.Order.ScottContinuity.Complete
+public import Mathlib.Order.ScottContinuity
 
 /-!
 # Scott continuity of height
 
-We show that `Order.height` is Scott continuous, and deduce that it commutes with suprema of
-monotone functions over a directed index type.
+## Main results
+
+* `Order.scottContinuous_height`: the height function `Order.height : α → ℕ∞` is Scott
+  continuous.
+* `Order.height_iSup_of_directed`: hence height commutes with directed suprema.
 -/
 
 public section
 
 namespace Order
 
-/-- A nonempty directed set whose image under `Order.height` has finite supremum has a greatest
+variable {α : Type*} [Preorder α]
+
+/-- A nonempty directed set on which `Order.height` has finite supremum has a greatest
 element. -/
-theorem exists_isGreatest_of_sSup_height_ne_top {α : Type*} [PartialOrder α] {d : Set α}
-    (hne : d.Nonempty) (hdir : DirectedOn (· ≤ ·) d) (hd : sSup (height '' d) ≠ ⊤) :
+theorem _root_.DirectedOn.exists_isGreatest_of_iSup_height_ne_top {d : Set α}
+    (hdir : DirectedOn (· ≤ ·) d) (hne : d.Nonempty) (hd : ⨆ x ∈ d, height x ≠ ⊤) :
     ∃ x, IsGreatest d x := by
+  rw [← sSup_image] at hd
   have : Nonempty ↥(height '' d) := (hne.image height).to_subtype
-  obtain ⟨x, hx, hxe⟩ := ENat.sSup_mem_of_nonempty_of_lt_top (lt_top_iff_ne_top.mpr hd)
+  obtain ⟨x, hx, hxe⟩ := ENat.sSup_mem_of_nonempty_of_lt_top hd.lt_top
   refine ⟨x, hx, fun y hy => ?_⟩
   obtain ⟨z, hz, hyz, hxz⟩ := hdir y hy x hx
-  rcases eq_or_lt_of_le hxz with rfl | hlt
-  · exact hyz
-  · exact absurd (height_strictMono hlt (hxe.trans_lt (lt_top_iff_ne_top.mpr hd)))
-      (not_lt.mpr ((le_sSup (Set.mem_image_of_mem height hz)).trans_eq hxe.symm))
+  refine hyz.trans <| not_lt_iff_le_imp_ge.mp (fun hlt => ?_) hxz
+  exact (height_strictMono hlt (hxe.trans_lt hd.lt_top)).not_ge <|
+    hxe ▸ le_sSup (Set.mem_image_of_mem height hz)
 
-/-- The height function on a partial order is Scott continuous. -/
-theorem scottContinuous_height {α : Type*} [PartialOrder α] :
-    ScottContinuous (Order.height : α → ℕ∞) := by
+/-- The height function is Scott continuous. -/
+theorem scottContinuous_height : ScottContinuous (height : α → ℕ∞) := by
   intro d hne hdir a hlub
-  suffices h : height a = sSup (height '' d) by rw [h]; exact isLUB_sSup _
-  refine le_antisymm ?_ (sSup_le fun _ ⟨x, hx, hxe⟩ => hxe ▸ height_mono (hlub.1 hx))
-  rcases eq_or_ne (sSup (height '' d)) ⊤ with hS | hS
+  suffices h : height a = ⨆ x ∈ d, height x by rw [h, ← sSup_image]; exact isLUB_sSup _
+  refine le_antisymm ?_ (iSup₂_le fun x hx => height_mono (hlub.1 hx))
+  rcases eq_or_ne (⨆ x ∈ d, height x) ⊤ with hS | hS
   · exact hS ▸ le_top
-  · obtain ⟨x, hxd, hxub⟩ := exists_isGreatest_of_sSup_height_ne_top hne hdir hS
-    rw [le_antisymm (hlub.2 hxub) (hlub.1 hxd)]
-    exact le_sSup (Set.mem_image_of_mem height hxd)
+  · obtain ⟨x, hxd, hxub⟩ := hdir.exists_isGreatest_of_iSup_height_ne_top hne hS
+    exact (height_mono (hlub.2 hxub)).trans (le_iSup₂ (f := fun x _ => height x) x hxd)
 
-/-- Height commutes with suprema of monotone functions over a directed index type. -/
-theorem height_iSup_of_monotone {α ι : Type*} [CompleteLattice α] [Nonempty ι] [Preorder ι]
-    [IsDirected ι (· ≤ ·)] {f : ι → α} (hf : Monotone f) :
-    height (⨆ i, f i) = ⨆ i, height (f i) := by
-  have hmap := (scottContinuous_height (α := α)).map_sSup (d := Set.range f)
-    (Set.range_nonempty f) hf.directed_le.directedOn_range
-  rw [sSup_range, ← Set.range_comp, sSup_range] at hmap
-  simpa [Function.comp_def] using hmap
+/-- Height commutes with directed suprema. -/
+theorem height_iSup_of_directed {ι : Sort*} {β : Type*} [CompleteLattice β] {f : ι → β}
+    (hf : Directed (· ≤ ·) f) : height (⨆ i, f i) = ⨆ i, height (f i) := by
+  cases isEmpty_or_nonempty ι
+  · simp
+  have := scottContinuous_height (Set.range_nonempty f) hf.directedOn_range isLUB_iSup
+  rw [← Set.range_comp] at this
+  exact this.iSup_eq.symm
 
 end Order

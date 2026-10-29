@@ -6,26 +6,47 @@ Authors: Lacitpille
 module
 
 public import Mathlib.LinearAlgebra.Dimension.Localization
+public import Mathlib.LinearAlgebra.DirectSum.Finsupp
+public import Mathlib.RingTheory.HopkinsLevitzki
+public import Mathlib.RingTheory.Ideal.Quotient.Noetherian
+public import Mathlib.RingTheory.KrullDimension.Zero
+public import Mathlib.RingTheory.QuotSMulTop
 public import Mathlib.RingTheory.Regular.IsSMulRegular
-public import Akizuki.Mathlib.Algebra.Module.Submodule.Pointwise
-public import Akizuki.Mathlib.Algebra.Module.Torsion.Basic
-public import Akizuki.Mathlib.Algebra.Order.Archimedean.WithTop
-public import Akizuki.Mathlib.LinearAlgebra.LinearIndependent.Lemmas
+public import Akizuki.Mathlib.RingTheory.KrullDimension.NonZeroDivisors
 public import Akizuki.Mathlib.RingTheory.Length
-public import Akizuki.Mathlib.RingTheory.QuotSMulTop
-public import Akizuki.Mathlib.RingTheory.FiniteLength.Support
 
 /-!
-# Length bounds for reductions modulo a regular element
+# The length of `M ⧸ xM`
 
-For `x` regular on `M` we relate the length of `QuotSMulTop x M = M ⧸ xM` to lengths of
-reductions of submodules, culminating in the bound
-`length (M ⧸ xM) ≤ rank M * length (R ⧸ xR)` over a Noetherian domain of Krull dimension ≤ 1.
+We compute the length of `QuotSMulTop x M = M ⧸ xM` for `x` regular on `M`.
+
+## Main results
+
+* `Module.length_quotSMulTop_eq_of_isFiniteLength_quotient`: if `M ⧸ E` has finite length, then
+  `length (M ⧸ xM) = length (E ⧸ xE)`.
+* `Module.length_quotSMulTop_of_free`: for `M` free,
+  `length (M ⧸ xM) = rank M * length (R ⧸ (x))`.
+* `Module.IsTorsion.isFiniteLength`: a finite torsion module over a Noetherian ring of Krull
+  dimension at most one has finite length.
+* `Module.length_quotSMulTop_eq_toENat_rank_mul`, `Module.length_quotSMulTop_le_toENat_rank_mul`:
+  over a Noetherian domain of Krull dimension at most one, `length (M ⧸ xM) = rank M * length
+  (R ⧸ (x))` for `M` finite, and `≤` in general.
+* `Module.isFiniteLength_quotSMulTop`: hence `M ⧸ xM` has finite length if `M` has finite rank.
+
+The last three results are the lemma in the proof of the Krull–Akizuki theorem in
+[Matsumura, *Commutative Ring Theory*, Theorem 11.7][matsumura1987]. The right-hand side
+`length R (R ⧸ Ideal.span {x})` is `Ring.ord R x`.
+
+## Implementation notes
+
+In general only the inequality holds: for `M = Frac R` and a nonzero nonunit `x`, `M ⧸ xM = 0`.
+It is deduced from the finite case by writing `M ⧸ xM` as the directed union of the images of
+the finitely generated submodules of `M`.
 -/
 
 public section
 
-open scoped Pointwise
+open scoped Pointwise nonZeroDivisors
 
 namespace Module
 
@@ -35,93 +56,128 @@ variable {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
 theorem length_quotient_smul_eq_add_of_isSMulRegular {x : R} (N : Submodule R M)
     (hx : IsSMulRegular M x) :
     length R (M ⧸ x • N) = length R (M ⧸ N) + length R (QuotSMulTop x M) := by
-  have h := length_quotient_map_eq_add_quotient_range (LinearMap.lsmul R M x) hx N
-  rwa [Submodule.map_lsmul, LinearMap.range_eq_map, Submodule.map_lsmul] at h
+  have h := length_quotient_map_eq_add_quotient_range (DistribSMul.toLinearMap R M x) hx N
+  rwa [← Submodule.pointwise_smul_def, LinearMap.range_eq_map,
+    ← Submodule.pointwise_smul_def] at h
 
-/-- For `x` regular on `M`: `length (M ⧸ xⁿM) = n * length (M ⧸ xM)`. -/
-theorem length_quotSMulTop_pow {x : R} (hx : IsSMulRegular M x) (n : ℕ) :
-    length R (QuotSMulTop (x ^ n) M) = n * length R (QuotSMulTop x M) := by
-  induction n with
-  | zero => simp [QuotSMulTop]
-  | succ n ih =>
-    calc length R (QuotSMulTop (x ^ (n + 1)) M)
-        = length R (M ⧸ x • (x ^ n • (⊤ : Submodule R M))) := by rw [← mul_smul, ← pow_succ']
-      _ = length R (M ⧸ x ^ n • (⊤ : Submodule R M)) + length R (QuotSMulTop x M) :=
-          length_quotient_smul_eq_add_of_isSMulRegular _ hx
-      _ = (n + 1 : ℕ) * length R (QuotSMulTop x M) := by
-          rw [ih, Nat.cast_succ, add_mul, one_mul]
-
-/-- Length of a product reduced modulo `x`. -/
-theorem length_quotSMulTop_pi {ι : Type*} [Finite ι] (x : R) :
-    length R (QuotSMulTop x (ι → R)) = ENat.card ι * length R (QuotSMulTop x R) := by
-  classical
-  cases nonempty_fintype ι
-  rw [(QuotSMulTop.piEquiv (M := fun _ : ι => R) x).length_eq, length_pi]
-
-/-- The reduction of `M` modulo `x` is bounded by the corresponding reduction of a submodule
-`E` plus `length (M ⧸ E)`. -/
-theorem length_quotSMulTop_le_submodule_add_quotient (E : Submodule R M) (x : R) :
-    length R (QuotSMulTop x M) ≤ length R (QuotSMulTop x E) + length R (M ⧸ E) := by
-  have hlen := length_le_add_of_exact _ _ <| QuotSMulTop.map_exact (r := x)
-    (LinearMap.exact_subtype_mkQ E) E.mkQ_surjective
-  have hquot : length R (QuotSMulTop x (M ⧸ E)) ≤ length R (M ⧸ E) :=
-    length_le_of_surjective ((x • (⊤ : Submodule R (M ⧸ E))).mkQ) (Submodule.mkQ_surjective _)
-  exact hlen.trans (add_le_add le_rfl hquot)
+/-- `length (M ⧸ xE) = length (E ⧸ xE) + length (M ⧸ E)`. -/
+theorem length_quotient_smul_eq_add (E : Submodule R M) (x : R) :
+    length R (M ⧸ x • E) = length R (QuotSMulTop x E) + length R (M ⧸ E) := by
+  have h := length_quotient_map_eq_add_quotient_range E.subtype E.injective_subtype
+    (x • (⊤ : Submodule R E))
+  rwa [Submodule.map_pointwise_smul, Submodule.map_subtype_top, Submodule.range_subtype] at h
 
 /-- If `M ⧸ E` has finite length and `x` is regular on `M`, then
-`length (M ⧸ xM) ≤ length (E ⧸ xE)`. -/
-theorem length_quotSMulTop_le_submodule_of_isFiniteLength_quotient (E : Submodule R M)
+`length (M ⧸ xM) = length (E ⧸ xE)`. -/
+theorem length_quotSMulTop_eq_of_isFiniteLength_quotient (E : Submodule R M)
     (hME : IsFiniteLength R (M ⧸ E)) {x : R} (hx : IsSMulRegular M x) :
-    length R (QuotSMulTop x M) ≤ length R (QuotSMulTop x E) := by
-  apply ENat.le_of_forall_natCast_mul_le_natCast_mul_add (length_ne_top_iff.mpr hME)
-  intro n
-  rw [← length_quotSMulTop_pow hx n, ← length_quotSMulTop_pow (hx.submodule E) n]
-  exact length_quotSMulTop_le_submodule_add_quotient E (x ^ n)
+    length R (QuotSMulTop x M) = length R (QuotSMulTop x E) := by
+  have h := length_quotient_smul_eq_add_of_isSMulRegular E hx
+  rw [length_quotient_smul_eq_add, add_comm (length R (QuotSMulTop x E))] at h
+  exact (WithTop.add_left_cancel (length_ne_top_iff.mpr hME) h).symm
 
-variable [IsDomain R] [IsNoetherianRing R] [Ring.KrullDimLE 1 R]
+/-- For a free module `M`, `length (M ⧸ xM) = rank M * length (R ⧸ (x))`. -/
+theorem length_quotSMulTop_of_free [Module.Free R M] (x : R) :
+    length R (QuotSMulTop x M) = (Module.rank R M).toENat * length R (R ⧸ Ideal.span {x}) := by
+  nontriviality R
+  let b := Module.Free.chooseBasis R M
+  rw [(QuotSMulTop.equivTensorQuot x M ≪≫ₗ b.repr.rTensor _ ≪≫ₗ
+    TensorProduct.finsuppScalarLeft R _ _).length_eq, length_finsupp,
+    Free.rank_eq_card_chooseBasisIndex, ENat.card]
 
-/-- Length bound for `QuotSMulTop x M` when `M` is a finite module over a Noetherian domain
-of Krull dimension at most one. -/
-theorem length_quotSMulTop_le_rank_toENat_mul_of_finite [Module.Finite R M] {x : R}
+section KrullDimLE
+
+variable [IsNoetherianRing R] [Ring.KrullDimLE 1 R]
+
+/- This is upstream `isFiniteLength_quotient_span_singleton`, which lives in the much heavier
+`Mathlib.RingTheory.OrderOfVanishing.Basic` (it imports power series). When upstreaming, move
+that lemma here with this proof instead of keeping a private copy. -/
+private theorem isFiniteLength_quotient_span_singleton_aux {x : R} (hx : x ∈ R⁰) :
+    IsFiniteLength R (R ⧸ Ideal.span {x}) := by
+  have : Ring.KrullDimLE 0 (R ⧸ Ideal.span {x}) :=
+    Ideal.krullDimLE_zero_quotient_iff_forall_minimalPrimes_isMaximal.mpr fun J hJ =>
+      hJ.1.1.isMaximal_of_mem_nonZeroDivisors hx (hJ.1.2 (Ideal.mem_span_singleton_self x))
+  have : IsArtinianRing (R ⧸ Ideal.span {x}) := isArtinianRing_iff_krullDimLE_zero.mpr this
+  exact isFiniteLength_iff_isNoetherian_isArtinian.mpr
+    ⟨isNoetherian_quotient _,
+      isArtinian_of_surjective_algebraMap (Ideal.Quotient.mk_surjective (I := .span {x}))⟩
+
+/-- A finite torsion module over a Noetherian ring of Krull dimension at most one has finite
+length. The case `M = R ⧸ (x)` is `isFiniteLength_quotient_span_singleton`. -/
+theorem IsTorsion.isFiniteLength [Module.Finite R M] (hM : IsTorsion R M) :
+    IsFiniteLength R M := by
+  obtain ⟨x, hxann, hx⟩ := Submodule.annihilator_top_inter_nonZeroDivisors hM
+  obtain ⟨n, f, hf⟩ := Module.Finite.exists_fin' R M
+  have h0 : x • (⊤ : Submodule R M) = ⊥ := by
+    rw [eq_bot_iff]
+    rintro _ ⟨y, -, rfl⟩
+    exact (Submodule.mem_bot R).mpr (Submodule.mem_annihilator.mp hxann y trivial)
+  have hpi : IsFiniteLength R (QuotSMulTop x (Fin n → R)) := by
+    nontriviality R
+    rw [← length_ne_top_iff, length_quotSMulTop_of_free]
+    exact WithTop.mul_ne_top (Cardinal.toENat_ne_top.mpr (rank_lt_aleph0 R _))
+      (length_ne_top_iff.mpr (isFiniteLength_quotient_span_singleton_aux hx))
+  exact (Submodule.quotEquivOfEqBot _ h0).isFiniteLength
+    (hpi.of_surjective (QuotSMulTop.map_surjective x hf))
+
+variable [IsDomain R]
+
+/-- Over a Noetherian domain of Krull dimension at most one, for a finite module `M` and `x`
+regular on `M`: `length (M ⧸ xM) = rank M * length (R ⧸ (x))`. -/
+theorem length_quotSMulTop_eq_toENat_rank_mul [Module.Finite R M] {x : R}
     (hx : IsSMulRegular M x) :
-    length R (QuotSMulTop x M) ≤ (Module.rank R M).toENat * length R (QuotSMulTop x R) := by
-  classical
-  obtain ⟨s, hv, hmax⟩ := exists_maximal_linearIndependent R (M := M)
-  have hcard : s.encard ≤ (Module.rank R M).toENat :=
-    LinearIndepOn.encard_le_toENat_rank (v := id) hv
-  have := (Set.encard_lt_top_iff.mp <| hcard.trans_lt <|
-    Cardinal.toENat_lt_top.mpr (Module.rank_lt_aleph0 (R := R) (M := M))).fintype
-  set E := Submodule.span R (Set.range (Subtype.val : s → M))
-  have hfl := (hmax.isTorsion_quotient_span hv).isFiniteLength
-  calc length R (QuotSMulTop x M)
-      ≤ length R (QuotSMulTop x E) :=
-        length_quotSMulTop_le_submodule_of_isFiniteLength_quotient E hfl hx
-    _ = length R (QuotSMulTop x (s → R)) := (QuotSMulTop.congr x (Basis.span hv).equivFun).length_eq
-    _ = ENat.card s * length R (QuotSMulTop x R) := length_quotSMulTop_pi x
-    _ = s.encard * length R (QuotSMulTop x R) := by rw [ENat.card_coe_set_eq]
-    _ ≤ (Module.rank R M).toENat * length R (QuotSMulTop x R) := by gcongr
+    length R (QuotSMulTop x M) = (Module.rank R M).toENat * length R (R ⧸ Ideal.span {x}) := by
+  obtain ⟨s, hs, hli⟩ := exists_set_linearIndependent_of_isDomain R M
+  have hv : LinearIndependent R ((↑) : s → M) := hli
+  set E := Submodule.span R (Set.range ((↑) : s → M))
+  have hE : Module.rank R E = Module.rank R M := by rw [rank_span hv, Subtype.range_coe, hs]
+  have htors : IsTorsion R (M ⧸ E) := by
+    have h := E.rank_quotient_add_rank
+    rw [hE] at h
+    simpa [IsTorsion, rank_eq_zero_iff] using
+      Cardinal.eq_of_add_eq_add_right (h.trans (zero_add _).symm) (rank_lt_aleph0 R M)
+  have := Module.Free.of_basis (Basis.span hv)
+  rw [length_quotSMulTop_eq_of_isFiniteLength_quotient E htors.isFiniteLength hx,
+    length_quotSMulTop_of_free, hE]
 
-/-- Length bound for `QuotSMulTop x M` with no finiteness hypothesis on `M`. -/
-theorem length_quotSMulTop_le_rank_toENat_mul {x : R} (hx : IsSMulRegular M x) :
-    length R (QuotSMulTop x M) ≤ (Module.rank R M).toENat * length R (QuotSMulTop x R) := by
+/-- `finrank` version of `Module.length_quotSMulTop_eq_toENat_rank_mul`. -/
+theorem length_quotSMulTop_eq_finrank_mul [Module.Finite R M] {x : R}
+    (hx : IsSMulRegular M x) :
+    length R (QuotSMulTop x M) = finrank R M * length R (R ⧸ Ideal.span {x}) := by
+  rw [length_quotSMulTop_eq_toENat_rank_mul hx,
+    Cardinal.toENat_eq_natCast.mpr (finrank_eq_rank _ _).symm]
+
+/-- Over a Noetherian domain of Krull dimension at most one, for `x` regular on `M`:
+`length (M ⧸ xM) ≤ rank M * length (R ⧸ (x))`. -/
+theorem length_quotSMulTop_le_toENat_rank_mul {x : R} (hx : IsSMulRegular M x) :
+    length R (QuotSMulTop x M) ≤ (Module.rank R M).toENat * length R (R ⧸ Ideal.span {x}) := by
   rw [length_eq_iSup_fg]
-  refine iSup_le ?_
-  rintro ⟨P, hP_fg⟩
-  obtain ⟨N, hN_fg, rfl⟩ :=
-    hP_fg.exists_fg_map_eq _ (Submodule.mkQ_surjective (x • (⊤ : Submodule R M)))
-  have : Module.Finite R N := Module.Finite.iff_fg.mpr hN_fg
+  refine iSup_le fun ⟨P, hP⟩ ↦ ?_
+  obtain ⟨N, hN, rfl⟩ := hP.exists_fg_map_eq_of_surjective _ (Submodule.mkQ_surjective _)
+  have : Module.Finite R N := Module.Finite.iff_fg.mpr hN
   have hle : N.map (Submodule.mkQ _) ≤ LinearMap.range (QuotSMulTop.map x N.subtype) := by
     rintro _ ⟨n, hn, rfl⟩
     exact ⟨Submodule.Quotient.mk ⟨n, hn⟩, rfl⟩
   calc length R (N.map (Submodule.mkQ _))
       ≤ length R (LinearMap.range (QuotSMulTop.map x N.subtype)) :=
-        length_le_of_injective (Submodule.inclusion hle) (Submodule.inclusion_injective hle)
+        length_le_of_injective _ (Submodule.inclusion_injective hle)
     _ ≤ length R (QuotSMulTop x N) :=
-        length_le_of_surjective (QuotSMulTop.map x N.subtype).rangeRestrict
-          (QuotSMulTop.map x N.subtype).surjective_rangeRestrict
-    _ ≤ (Module.rank R N).toENat * length R (QuotSMulTop x R) :=
-        length_quotSMulTop_le_rank_toENat_mul_of_finite (hx.submodule N)
-    _ ≤ (Module.rank R M).toENat * length R (QuotSMulTop x R) := by
-        gcongr; exact Submodule.rank_le N
+        length_le_of_surjective _ (QuotSMulTop.map x N.subtype).surjective_rangeRestrict
+    _ = (Module.rank R N).toENat * length R (R ⧸ Ideal.span {x}) :=
+        length_quotSMulTop_eq_toENat_rank_mul (hx.submodule N)
+    _ ≤ _ := by grw [Submodule.rank_le N]
+
+/-- Over a Noetherian domain of Krull dimension at most one, if `M` has finite rank and `x` is
+regular on `M`, then `M ⧸ xM` has finite length. -/
+theorem isFiniteLength_quotSMulTop {x : R} (hx : IsSMulRegular M x)
+    (hM : Module.rank R M < Cardinal.aleph0) : IsFiniteLength R (QuotSMulTop x M) := by
+  rcases eq_or_ne x 0 with rfl | hx0
+  · have : Subsingleton M := ⟨fun a b => hx (by simp)⟩
+    exact .of_subsingleton
+  refine length_ne_top_iff.mp (ne_top_of_le_ne_top ?_ (length_quotSMulTop_le_toENat_rank_mul hx))
+  exact WithTop.mul_ne_top (Cardinal.toENat_ne_top.mpr hM) <| length_ne_top_iff.mpr <|
+    isFiniteLength_quotient_span_singleton_aux (mem_nonZeroDivisors_of_ne_zero hx0)
+
+end KrullDimLE
 
 end Module
